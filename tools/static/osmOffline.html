@@ -1,0 +1,433 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+  <head> 
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+    <link rel="stylesheet" href="file:///Users/apple/Documents/map/v5.3.0/css/ol.css" type="text/css" /> 
+    <link rel="stylesheet" href="file:///Users/apple/Documents/map/v5.3.0/css/bootstrap.min.css" type="text/css" /> 
+    <title>地图</title> 
+    <style>
+      .map {
+        height: 100%;
+        width: 100%;
+      }
+      /* .myposition {
+        float:left;
+        position:relative;
+        bottom: 10px;
+        width: 100px;
+        height: 10px;
+        z-index: 2000;
+      } */
+      /* .mousePosition {
+        color:blue;
+        font-size: 15px;
+        font-family:'微软雅黑';
+      } */
+      /* #anchor_css {
+        cursor:pointer;
+      } */
+      /* @keyframes zoom {
+        from {top: 0; left: 0; width: 32px; height: 32px;}
+        50% {top: -16px; left: -16px; width: 64px; height: 64px;}
+        to {top: 0; left: 0; width: 32px; height: 32px;}
+      }
+
+      @-moz-keyframes zoom {
+        from {top: 0; left: 0; width: 32px; height: 32px;}
+        50% {top: -16px; left: -16px; width: 64px; height: 64px;}
+        to {top: 0; left: 0; width: 32px; height: 32px;}
+      }
+
+      @-webkit-keyframes zoom {
+        from {top: 0; left: 0; width: 32px; height: 32px;}
+        50% {top: -16px; left: -16px; width: 64px; height: 64px;}
+        to {top: 0; left: 0; width: 32px; height: 32px;}
+      }
+
+      @-o-keyframes zoom {
+        from {top: 0; left: 0; width: 32px; height: 32px;}
+        50% {top: -16px; left: -16px; width: 64px; height: 64px;}
+        to {top: 0; left: 0; width: 32px; height: 32px;}
+      } */
+      /* #anchorImg {
+        display: block;
+        position: absolute;
+        animation: zoom 5s;
+        animation-iteration-count: infinite; 
+        -moz-animation: zoom 5s;
+        -moz-animation-iteration-count: infinite;
+        -webkit-animation: zoom 5s;
+        -webkit-animation-iteration-count: infinite;
+        -o-animation: zoom 5s;
+        -o-animation-iteration-count: infinite;
+      } */
+    </style> 
+    <script src="file:///Users/apple/Documents/map/v5.3.0/build/ol.js"></script> 
+    <script src="file:///Users/apple/Documents/map/v5.3.0/build//jquery-3.4.1.min.js"></script>
+    <script type="text/javascript">
+      window.onload = function () {
+
+        // 锚点svg图像
+        var mysvg = new Image();
+        var svg = '<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="30px" height="30px" viewBox="0 0 30 30" enable-background="new 0 0 30 30" xml:space="preserve">'+    
+      '<path fill="#156BB1" d="M22.906,10.438c0,4.367-6.281,14.312-7.906,17.031c-1.719-2.75-7.906-12.665-7.906-17.031S10.634,2.531,15,2.531S22.906,6.071,22.906,10.438z"/>'+
+      '<circle fill="#FFFFFF" cx="15" cy="10.677" r="3.291"/></svg>';
+        mysvg.src = 'data:image/svg+xml,' + escape(svg);
+
+        //初始化鼠标位置控件
+        // var mousePositionControl = new ol.control.MousePosition({
+        //   //样式类名称
+        //   className: 'mousePosition',
+        //   //投影坐标格式，显示小数点后边多少位
+        //   coordinateFormat: ol.coordinate.createStringXY(14),
+        //   //指定投影
+        //   projection: 'EPSG:4326',
+        //   //目标容器
+        //   target:document.getElementById('myposition')
+        // });
+
+        //创建地图
+        var center = [117.02663702113821,36.676403981720881];
+        var map = new ol.Map({
+          view: new ol.View({ 
+            center: center,
+            projection: 'EPSG:4326',
+            zoom: 13,
+            //minZoom: 12,
+            // maxZoom: 14
+          }),
+          // controls: ol.control.defaults().extend([mousePositionControl]),
+          target: 'map'
+        });
+
+        //标准TMS切片加载方式
+        var offlineSource =  new ol.source.XYZ({
+          // url: 'file:///D:/Users/chinaunicom_svn_repository/zhuanyongPlatform/地图/Tiles/{z}/{x}/{y}.png',
+          url: 'https://{a-c}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+        });
+        var offlineMapLayer = new ol.layer.Tile({
+          source: offlineSource
+        });
+        map.addLayer(offlineMapLayer);
+
+        // -------------------调试瓦片图层-------------------------------
+        // var tileDebugLayer = new ol.layer.Tile({
+        //   source: new ol.source.TileDebug({
+        //     projection: 'EPSG:4326',
+        //     tileGrid: offlineSource.getTileGrid(),
+        //   })
+        // });
+        // map.addLayer(tileDebugLayer);
+        // -------------------------------------------------------------
+
+        // -------------------锚点图层----------------------------------
+        var layer = new ol.layer.Vector({
+          source: new ol.source.Vector(),
+          // 注意：把feature上的style，直接移到layer上，避免直接在feature上设置style
+          // style: new ol.style.Style({
+          //   image: new ol.style.Circle({
+          //     radius: 10,
+          //     fill: new ol.style.Fill({
+          //       color: 'red'
+          //     })
+          //   })
+          // })
+        })
+        map.addLayer(layer);
+        // -------------------------------------------------------------
+        
+        // -------------------绘制锚点---------------------------------- 
+        var anchor = new ol.Feature({
+          geometry: new ol.geom.Point([117.02663702113821,36.676403981720881])
+        });
+        anchor.setStyle(new ol.style.Style({
+          image: new ol.style.Icon({
+            img: mysvg,    // 设置Image对象
+            imgSize: [30, 30]    // 及图标大小
+          })
+        }));
+        layer.getSource().addFeature(anchor);
+        // -------------------------------------------------------------
+
+        // -------------------绘制线------------------------------------ 
+        var line = new ol.Feature({
+          geometry:new ol.geom.LineString([[117.02663702113821,36.676403981720881], [117.08021735725924,36.6686553923646]])
+        });
+        line.setStyle(new ol.style.Style({
+          stroke: new ol.style.Stroke({
+            color: 'blue',
+            size: 5
+          })
+        }));
+        layer.getSource().addFeature(line);
+        // -------------------------------------------------------------
+
+        // -------------------导航按钮事件---------------------------- 
+        var view = map.getView();
+        var zoom = view.getZoom();
+        var center = view.getCenter();
+        var rotation = view.getRotation();
+        // 复位功能（复位到初始复位）
+        $("#restore").click (function() {
+          view.setCenter(center); //初始中心点
+          view.setRotation(rotation); //初始旋转角度
+          view.setZoom(zoom); //平移地图
+        })
+        // 实现单击缩小按钮的功能
+        // document.getElementById('zoom-out').onclick = function() {
+        //   var view = map.getView(); //获取当前地图视图
+        //   var zoom = view.getZoom(); //获得当前缩放级别
+        //   view.setZoom(zoom - 1); //地图缩小一级
+        // }
+        // 实现单击放大的功能按钮
+        // document.getElementById('zoom-in').onclick = function() {
+        //   var view = map.getView(); //获取当前地图视图
+        //   var zoom = view.getZoom(); //获得当前缩放级别
+        //   view.setZoom(zoom + 1); //地图放大一级
+        // }
+        // 平移功能
+        // document.getElementById('panto').onclick = function() {
+        //   var view = map.getView(); //获取当前地图视图
+        //   var lz = ol.proj.fromLonLat([103.73333, 36.03333]);
+        //   view.setCenter(lz); //平移地图
+        // }
+        // -------------------------------------------------------------
+
+        // -------------------鼠标点击位置坐标显示------------------------
+        var container = document.getElementById('popup');
+        var content = document.getElementById('popup-content');
+        var closer = document.getElementById('popup-closer');
+
+        var overlay = new ol.Overlay(/** @type {olx.OverlayOptions} */ ({
+          element: container,
+          autoPan: true,
+          autoPanAnimation: {
+            duration: 250
+          }
+        }));
+        // 监听地图点击事件
+        map.on('singleclick', function(evt) {
+          // 获取当前点击坐标，并设置到HTML元素上去
+          var coordinate = evt.coordinate;
+          var hdms = ol.coordinate.toStringHDMS(ol.proj.transform(coordinate, 'EPSG:4326', 'EPSG:4326'));
+          content.innerHTML = '<code>' + coordinate + '</code>';
+          // 设置overlay的位置，从而显示在鼠标点击处
+          map.addOverlay(overlay);
+          overlay.setPosition(coordinate);
+        });
+        // -------------------------------------------------------------
+
+        // -------------------示例锚点----------------------------------
+        //css标记 ，轻微偏差
+        // var anchor_css = new ol.Overlay({
+        //   element: document.getElementById('anchor_css')
+        // });
+        // // 关键的一点，需要设置附加到地图上的位置
+        // anchor_css.setPosition([117.02663702113821,36.676403981720881]);
+        // // 然后添加到map上
+        // map.addOverlay(anchor_css);
+        // //css动画标记
+        // var anchor_img = new ol.Overlay({
+        //   element: document.getElementById('anchor_img')
+        // });
+        // anchor_img.setPosition([117.09664702113821,36.676403981720881]);
+        // map.addOverlay(anchor_img);
+        // -------------------------------------------------------------
+
+        // -------------------地图中心锚点-------------------------------
+        // var anchor_F = new ol.Feature({
+        //   geometry: new ol.geom.Point([117.01664702113821,36.676403981720881])
+        // });
+        // // 设置样式，在样式中就可以设置图标
+        // anchor_F.setStyle(new ol.style.Style({
+        //   image: new ol.style.Icon({
+        //     src: 'D://Users//chinaunicom_svn_repository//zhuanyongPlatform//地图//anchor.png'
+        //   })
+        // }));
+        // // 添加到之前的创建的layer中去
+        // layer.getSource().addFeature(anchor_F);
+        // // 监听地图层级变化
+        // map.getView().on('change:resolution', function(){
+        //   var style = anchor_F.getStyle();
+        //   // 重新设置图标的缩放率，基于层级10来做缩放
+        //   style.getImage().setScale(this.getZoom() / 10);
+        //   anchor_F.setStyle(style);
+        // })
+        // -------------------------------------------------------------
+
+        // -------------------各种图形-----------------------------------
+        // // 添加一个三角形
+        // var shape = new ol.Feature({
+        //   geometry: new ol.geom.Point([117.00664702113821,36.686403981720881])
+        // });
+        // shape.setStyle(new ol.style.Style({
+        //   image: new ol.style.RegularShape({
+        //     points: 3,    // 顶点数
+        //     radius: 10,    // 图形大小，单位为像素
+        //     stroke: new ol.style.Stroke({ // 设置边的样式
+        //         color: 'red',
+        //         size: 2
+        //     })
+        //   })
+        // }));
+        // layer.getSource().addFeature(shape);
+        // // 添加一个五星
+        //   var star = new ol.Feature({
+        //   geometry: new ol.geom.Point([117.00664702113821,36.676403981720881])
+        // });
+        // star.setStyle(new ol.style.Style({
+        //   image: new ol.style.RegularShape({
+        //     points: 5,    // 顶点个数
+        //     radius1: 20, // 外圈大小
+        //     radius2: 10, // 内圈大小
+        //     stroke: new ol.style.Stroke({ // 设置边的样式
+        //         color: 'red',
+        //         size: 2
+        //     }),
+        //     fill: new ol.style.Fill({ // 设置五星填充样式
+        //         color: 'blue'
+        //     })
+        //   })
+        // }));
+        // layer.getSource().addFeature(star);
+        // //文字
+        // var txt = new ol.Feature({
+        //   geometry: new ol.geom.Point([117.00664702113821,36.666403981720881])
+        // });
+        // // 设置文字style
+        // txt.setStyle(new ol.style.Style({
+        //   text: new ol.style.Text({
+        //     // font: '10px sans-serif' 默认这个字体，可以修改成其他的，格式和css的字体设置一样
+        //     text: '文字标记',
+        //     fill: new ol.style.Fill({
+        //         color: 'red'
+        //     })
+        //   })
+        // }));
+        // layer.getSource().addFeature(txt);
+        // //大量标记
+        // var style_more = new ol.style.Style({
+        //   image: new ol.style.Icon({
+        //     src: 'D://Users//chinaunicom_svn_repository//zhuanyongPlatform//地图//anchor.png'
+        //   })
+        // });
+        // var latlon =[{lon:"117.00664702113821",lat:"36.666003981720881"},{lon:"117.00664702113821",lat:"36.665013981720881"},{lon:"117.00664702113821",lat:"36.663003981720881"},{lon:"117.00624702113821",lat:"36.665013981720881"}]
+        // for (var index = 0; index < latlon.length; index++) {
+        //   var feature = new ol.Feature({
+        //     geometry: new ol.geom.Point([latlon[index].lon, latlon[index].lat])
+        //   });
+        //   feature.setStyle(style_more);
+        //   layer.getSource().addFeature(feature);
+        // }
+        // -------------------------------------------------------------
+
+        // -------------------事件提示信息-------------------------------
+        // // 响应单击事件
+        // map.on('singleclick', function(event){
+        //   document.getElementById('info').innerHTML = '触发了ol.Map的单击事件：singleclick';
+        // });
+        // // 响应双击事件
+        // map.on('dblclick', function(event){
+        //   document.getElementById('info').innerHTML = '触发了ol.Map的双击事件：dblclick';
+        // });
+        // // 响应点击事件
+        // map.on('click', function(event){
+        //   document.getElementById('info').innerHTML = '触发了ol.Map的点击事件：click';
+        // });
+        // 响应鼠标移动事件，事件太频繁，故注释掉了，可自行验证该事件
+        // map.on('pointermove', function(event){
+        //     document.getElementById('info').innerHTML = '触发了ol.Map的鼠标移动事件：pointermove';
+        // });
+        // // 响应拖拽事件
+        // map.on('pointerdrag', function(event){
+        //   document.getElementById('info').innerHTML = '触发了ol.Map的拖拽事件：pointerdrag';
+        // });
+        // // 地图移动事件
+        // map.on('moveend', function(event){
+        //   document.getElementById('info').innerHTML = '触发了ol.Map的地图移动事件：moveend';
+        // });
+        // ---------------------------------------------------------
+
+        // -------------------圆形示例-------------------------------
+        // var circle2 = new ol.Feature({
+        //   geometry: new ol.geom.Point([117.00204702113821,36.666403981720881])
+        // })
+        // // 此处不再为feature设置style
+        // layer.getSource().addFeature(circle2);
+        // // 添加一个用于选择Feature的交互方式
+        // map.addInteraction(new ol.interaction.Select({
+        //   //condition: ol.events.condition.pointerMove,
+        //   // 设置选中后的style
+        //   style: new ol.style.Style({
+        //     image: new ol.style.Circle({
+        //       radius: 10,
+        //       fill: new ol.style.Fill({
+        //         color: 'blue'
+        //       })
+        //     })
+        //   })
+        // }));
+        // ---------------------------------------------------------
+
+        // -------------------绘制地图的线---------------------------
+        // var lineLayer = new ol.layer.Vector({
+        //   source: new ol.source.Vector(),
+        //   style: new ol.style.Style({
+        //     stroke: new ol.style.Stroke({
+        //       color: 'blue',
+        //       size: 5
+        //     })
+        //   })
+        // })
+        // map.addLayer(lineLayer);
+        // var draw_select = document.getElementById('draw-type')
+        // // 添加绘图的交互类
+        // var lineDraw = new ol.interaction.Draw({
+        //   type:draw_select.options[draw_select.selectedIndex].text,
+        //   source: lineLayer.getSource(),
+        //   //maxPoints: 4
+        // });
+        // $("#draw").click(function(){	
+        //   if($("#draw").text() == "取消绘制"){
+        //     $("#draw").text('绘制地图');
+        //     map.removeInteraction(lineDraw); 
+        //   } else{
+        //     lineDraw = new ol.interaction.Draw({
+        //       //type: 'LineString', 'Point', 'Polygon', 'MultiPoint', 'MultiLineString', 'MultiPolygon', 'Circle'
+        //       type: draw_select.options[draw_select.selectedIndex].text,
+        //       source: lineLayer.getSource(),
+        //       //maxPoints: 4		
+        //     });
+        //     $("#draw").text('取消绘制');
+        //     map.addInteraction(lineDraw);
+        //   }
+        // })
+        // ---------------------------------------------------------
+      }
+    </script> 
+  </head> 
+  <body>
+ 	  <div id="popup" class="ol-popup">
+      <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+      <div id="popup-content"></div>
+    </div>
+    <!-- <div id="anchor_css"><img src="D://Users//chinaunicom_svn_repository//zhuanyongPlatform//地图//anchor.png" alt="示例锚点"/></div>
+    <div id="anchor_img" style="width: 64px;height: 64px;" ><img id='anchorImg' src="D://Users//chinaunicom_svn_repository//zhuanyongPlatform//地图//anchor.png" alt="示例锚点"/></div> -->
+	  <!-- <div id="info" style="background-color: #999;">触发事件提示信息</div> -->
+    <div id="map" class="map">
+      <div id="menu">
+        <button id="restore" class="btn btn-info">复位地图</button>
+        <!-- <button id="zoom-out" class="btn btn-info">单击缩小</button>
+        <button id="zoom-in" class="btn btn-info">单击放大</button> -->
+        <!-- <button id="panto" class="btn btn-info">移动地图</button> -->
+        <!-- <button id="draw" class="btn btn-info">绘制地图</button>
+        <select id = "draw-type">
+          <option>LineString</option>
+          <option>Polygon</option>
+          <option>Circle</option>
+          <option>Point</option>
+        </select> -->
+      </div>  
+		<!-- <div id="myposition"></div>   -->
+  </body>
+</html>

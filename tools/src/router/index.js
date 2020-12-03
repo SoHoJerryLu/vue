@@ -4,11 +4,13 @@ import Router from 'vue-router'
 Vue.use(Router)
 
 export default new Router({
-  routes: [
-    {
-      path: '/',
+  routes: [{
+      path: '/olmap',
+      name: 'olmap',
+      component: () => import('@/pages/Openlayers/openlayersMap'),
+  },{
+      path: '/tableTools',
       name: 'tableTools',
       component: () => import('@/pages/ElementUI/tableTools'),
-    }
-  ]
+  }]
 })
