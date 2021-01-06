@@ -33,6 +33,7 @@ import XYZ from 'ol/source/XYZ'
 import Vector from 'ol/source/Vector'
 import TileLayer from 'ol/layer/Tile'
 import VectorLayer from 'ol/layer/Vector'
+import HeatmapLayer from 'ol/layer/Heatmap'
 import Polygon from 'ol/geom/Polygon'
 import Draw from 'ol/interaction/Draw'
 import { createBox } from 'ol/interaction/Draw'
@@ -44,7 +45,7 @@ export default {
     mapPointList: {
       type: Array,
       default: function() {
-        return []
+        return [[117.031637,36.676403],[117.033637,36.676403],[117.035637,36.676403],[117.026637,36.676403]]
       }
     }
   },
@@ -58,6 +59,7 @@ export default {
       },
       mysvg: null, // 锚点图像
       map: null, // 地图层
+      heatLayer: null, // 热力图层
       // trailLayer: null, // 轨迹图层
       fenceLayer: null, // 围栏图层
       interactionDraw: null // 围栏绘图交互类
@@ -99,11 +101,20 @@ export default {
       })
       // -------------------------------------------------------------
 
+      // -------------------初始化热力图层-----------------------------
+      this.heatLayer = new HeatmapLayer({
+        source: new Vector(),
+        blur: 20, // 模糊尺寸
+        radius: 20 // 热点半径
+      })
+      this.map.addLayer(this.heatLayer)
+      // -------------------------------------------------------------
+
       // -------------------初始化轨迹图层-----------------------------
-      // this.trailLayer = new VectorLayer({
-      //   source: new Vector()
-      // })
-      // this.map.addLayer(this.trailLayer)
+      this.trailLayer = new VectorLayer({
+        source: new Vector()
+      })
+      this.map.addLayer(this.trailLayer)
       // -------------------------------------------------------------
 
       // -------------------初始化围栏图层-----------------------------
@@ -139,46 +150,58 @@ export default {
           results.push([rawArray[i], rawArray[i + 1]])
         }
         console.log(results)
-      }
-      )
+      })
       // -------------------------------------------------------------
 
-      // this.drawTrail(that.mapPointList);
+      this.drawTrail(that.mapPointList);
     },
 
     // 功能: 绘制轨迹
-    // drawTrail(mapPointList) {
-    //   const that = this;
-    //   // 清除轨迹图层的轨迹
-    //   this.trailLayer.getSource().clear();
-    //   // 复位地图，地图中心点设为轨迹点第一个点的位置
-    //   that.map.getView().setCenter(mapPointList.length == 0 || mapPointList == null ? [117.031637, 36.676403] : mapPointList[0]);
+    drawTrail(mapPointList) {
+      const that = this;
+      // 清除轨迹图层的轨迹
+      this.trailLayer.getSource().clear();
+      // 复位地图，地图中心点设为轨迹点第一个点的位置
+      that.map.getView().setCenter(mapPointList.length == 0 || mapPointList == null ? [117.031637, 36.676403] : mapPointList[0]);
 
-    //   // 点
-    //   for (let i = 0; i < mapPointList.length; i++) {
-    //     const anchor = new Feature({
-    //       geometry: new Point(mapPointList[i])
-    //     })
-    //     anchor.setStyle(new Style({
-    //       image: new Icon({
-    //         img: that.mysvg, // 设置Image对象
-    //         imgSize: [30, 30] // 及图标大小
-    //       })
-    //     }))
-    //     this.trailLayer.getSource().addFeature(anchor)
-    //   }
-    //   // 线
-    //   var line = new Feature({
-    //     geometry: new LineString(mapPointList)
-    //   })
-    //   line.setStyle(new Style({
-    //     stroke: new Stroke({
-    //       color: 'blue',
-    //       width: 2
-    //     })
-    //   }))
-    //   this.trailLayer.getSource().addFeature(line)
-    // },
+      // 热力点
+      for (let i = 0; i < mapPointList.length; i++) {
+        const anchor = new Feature({
+          geometry: new Point(mapPointList[i])
+        })
+        // anchor.setStyle(new Style({
+        //   image: new Icon({
+        //     img: that.mysvg, // 设置Image对象
+        //     imgSize: [30, 30] // 及图标大小
+        //   })
+        // }))
+        this.heatLayer.getSource().addFeature(anchor)
+      }
+      // 点
+      for (let i = 0; i < mapPointList.length; i++) {
+        const anchor = new Feature({
+          geometry: new Point(mapPointList[i])
+        })
+        anchor.setStyle(new Style({
+          image: new Icon({
+            img: that.mysvg, // 设置Image对象
+            imgSize: [30, 30] // 及图标大小
+          })
+        }))
+        this.trailLayer.getSource().addFeature(anchor)
+      }
+      // 线
+      var line = new Feature({
+        geometry: new LineString(mapPointList)
+      })
+      line.setStyle(new Style({
+        stroke: new Stroke({
+          color: 'blue',
+          width: 2
+        })
+      }))
+      this.trailLayer.getSource().addFeature(line)
+    },
 
     locFormat(locArray) {
       return [Number(locArray[0]), Number(locArray[1])];
