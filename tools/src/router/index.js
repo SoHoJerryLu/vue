@@ -12,5 +12,9 @@ export default new Router({
       path: '/tableTools',
       name: 'tableTools',
       component: () => import('@/pages/ElementUI/tableTools'),
+  },{
+    path: '/speech',
+    name: 'speech',
+    component: () => import('@/components/html5/speech'),
   }]
 })
